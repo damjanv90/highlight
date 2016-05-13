@@ -4,115 +4,145 @@
 #include <string.h>
 
 #include "settings.h"
+#include "args_parser.h"
+#include "util.h"
 
 void usage(){
-  fprintf(stderr,
+  fprintf(stdout,
                   "\nhighlight v%s\n\n"
 
-                  "Usage: highlight <pattern1>... <infile>\n"
+                  "Usage: highlight [OPTIONS...] PATTERN... [FILE]\n"
                   "Example: highlight ERROR:red WARN:yellow debug.log\n\n"
 
-                  "<pattern> - <regex>:<color>\n"
-                  " <regex> - a regular expression\n"
-                  " <color> - red, yellow, green, blue, white\n"
-                  "<infile>  - a path to an input text file\n\n",
+                  "PATTERN\t\tREGEX:COLOR\n"
+                  "  REGEX\t\ta regular expression\n"
+                  "  COLOR\t\tred, yellow, green, blue, white\n"
+                  "FILE\t\ta path to an input text file\n"
+                  "OPTIONS:\n"
+                  "  -h, --help\t\tdisplay this help and exit\n"
+                  "  -s, --selection-only\t\thighlight only matched parts of the line, not the whole line\n\n",
                   VERSION
           );
 }
 
-typedef enum {red=31} color;
+
 
 typedef struct pattern {
   regex_t regex;
-  int color;
+  color col;
   struct pattern* next;
-}Pattern;
+}PreparedPattern;
 
 
-Pattern* Pattern_new(char* regexStr, int color){
-
-  Pattern* newPattern = (Pattern*)malloc(sizeof(Pattern*));
+PreparedPattern* PreparedPattern_new(char* regexStr, color col){
+  PreparedPattern* newPattern = (PreparedPattern*)malloc(sizeof(PreparedPattern));
 
   /* Compile regular expression */
   int regexCompilationError;
   regexCompilationError = regcomp(&(newPattern->regex), regexStr, 0);
   if (regexCompilationError) {
       fprintf(stderr, "Could not compile regex\n%s\n", regexStr);
-      exit(1);
+      exit(FAILURE);
   }
-  newPattern->color=color;
+  newPattern->col=col;
+  newPattern->next = NULL;
 
   return newPattern;
 }
 
 
-void parsePatterns(char** patternStrings, int patternCnt, Pattern** patterns){
-  Pattern* prev = NULL;
+void prepare_patterns(Arguments* parsed_args, PreparedPattern** patterns){
+  PreparedPattern* prev = NULL;
 
-  int i;
-  for (i=0; i< patternCnt; i++){
-
-    char* regexStr=strtok(patternStrings[i], ":");
-    int color = atoi(strtok(NULL, ":"));
-
-    Pattern* newPattern = Pattern_new(regexStr, color);
+  PatternList* raw_pattern = parsed_args->patterns_head;
+  while (raw_pattern != NULL){
+    PreparedPattern* newPattern = PreparedPattern_new(raw_pattern->pattern.regex, raw_pattern->pattern.col);
 
     if (prev != NULL){
       prev->next = newPattern;
-      prev = newPattern;
     } else {
       // first
-      prev = newPattern;
       *patterns = newPattern;
     }
+    prev = newPattern;
+    raw_pattern = raw_pattern->next;
   }
 }
 
 int main(int argc, char** argv){
 
-  if (argc < 2){
+  Arguments* parsed_args;
+  int args_err = parse_arguments(argc, argv, &parsed_args);
+
+  if (args_err){
     usage();
-    exit(1);
+    exit(FAILURE);
   }
+
+  OptionList* opt = parsed_args->options_head;
+  while (opt != NULL){
+
+    switch (opt->opt){
+
+      case PRINT_HELP:
+        usage();
+        exit(SUCCESS);
+
+      case SELECTION_ONLY:
+        // TODO: implement
+        break;
+
+      default:
+        fprintf(stderr, "Unknown option\n\n");
+        usage();
+        exit(FAILURE);
+    }
+
+    opt = opt->next;
+  }
+
+  if (parsed_args->patterns_head == NULL){
+    fprintf(stderr, "You must provide at least one valid pattern\n\n");
+    usage();
+    exit(FAILURE);
+  }
+
+  PreparedPattern* patterns;
+  prepare_patterns(parsed_args, &patterns);
 
   FILE* out = stdout;
   FILE* in;
-  if (argc == 2){
+  if (parsed_args->input_file == NULL){
     in = stdin;
   } else {
     //todo
-    in = fopen(argv[argc - 1], "r");
+    in = fopen(parsed_args->input_file, "r");
     if (in == NULL) {
-      fprintf(stderr, "Could not open file\n%s\n", argv[argc - 1]);
-      exit(1);
+      fprintf(stderr, "Could not open file\n%s\n", parsed_args->input_file);
+      exit(FAILURE);
     }
   }
 
-  Pattern* patterns;
-  parsePatterns(&(argv[1]), argc==2 ? 1 : argc-2, &patterns);
-
   char * line = NULL;
   size_t len = 0;
-  int hasInput;
+  int has_input;
 
-  hasInput = getline(&line, &len, in) != -1;
-
-  while (hasInput){
-
-    int matches=0;
-    Pattern* onePattern;
+  has_input = !feof(in) && getline(&line, &len, in) != -1;
+  while (has_input){
+    int matches = FALSE;
+    PreparedPattern* onePattern;
     for (onePattern = patterns; onePattern; onePattern = onePattern->next){
       /* Execute regular expression */
-      int regexResult;
-      regexResult = regexec(&(onePattern->regex), line, 0, NULL, 0);
+      int regexResult = regexec(&(onePattern->regex), line, 0, NULL, 0);
       if (!regexResult) {
-          fprintf(out, "\e[1;%dm%s\e[0m", onePattern->color, line );
-          matches = 1;
+          fprintf(out, "\e[1;%dm%s\e[0m", onePattern->col, line );
+          matches = TRUE;
           break;
-      }else if(regexResult != REG_NOMATCH) {
+      } else if(regexResult != REG_NOMATCH) {
+          //TODO: vidjeti sta radi ova regerror
           regerror(regexResult, &(onePattern->regex), line, len);
           fprintf(stderr, "Regex match failed: %s\n", line);
-          exit(1);
+          exit(FAILURE);
       }
     }
 
@@ -120,14 +150,14 @@ int main(int argc, char** argv){
       fprintf(out, "%s", line );
     }
 
-    hasInput = getline(&line, &len, in) != -1;
+    has_input = !feof(in) && getline(&line, &len, in) != -1;
   }
 
-  /* Free memory allocated to the pattern buffer by regcomp() */
-  Pattern* p;
-  while (p){
+  // Free memory allocated to the pattern buffer by regcomp()
+  PreparedPattern* p=patterns;
+  while (p != NULL){
     regfree(&(p->regex));
-    Pattern* tmp = p;
+    PreparedPattern* tmp = p;
     p = p->next;
     free(tmp);
   }
@@ -136,5 +166,5 @@ int main(int argc, char** argv){
     free (line);
   }
 
-  return 0;
+  return SUCCESS;
 }
