@@ -2,7 +2,7 @@
 
   #define ARGS_PARSER_H
 
-  typedef enum {black=30, red, green, yellow, blue, magneta, cyan, white} color;
+  typedef enum {black=0, red, green, yellow, blue, magneta, cyan, white} color;
 
   typedef struct {
     char* regex;
@@ -14,7 +14,7 @@
     struct pattern_list* next;
   } PatternList;
 
-  typedef enum {PRINT_HELP, SELECTION_ONLY} option;
+  typedef enum {PRINT_HELP, SELECTION_ONLY, BACKGROUND, IGNORE_CASE} option;
 
   typedef struct options_list{
     option opt;

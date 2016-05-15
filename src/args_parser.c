@@ -1,29 +1,53 @@
 #include <string.h>
 #include <stdlib.h>
 #include "args_parser.h"
-#include "util.h"
+#include "errors.h"
+#include "bool.h"
 
 
-color parse_color(char* color_str);
+typedef struct OptionInfo{
+  option opt;
+  const char* short_str;
+  const char* long_str;
+}OptionInfo;
+
+#define ADD_OPTION(opt, short_str, long_str) {opt, short_str, long_str}
+
+static const struct OptionInfo all_options[4] = {
+  ADD_OPTION(PRINT_HELP, "-h", "--help"),
+  ADD_OPTION(SELECTION_ONLY, "-s", "--selection-only"),
+  ADD_OPTION(BACKGROUND, "-b", "--background"),
+  ADD_OPTION(IGNORE_CASE, "-i", "--ignore-case")
+};
+
+int parse_color(char* color_str, color* parsed_color);
+int parse_options(int argc, char** argv, int* last_location, Arguments* parsed_arguments);
+int parse_patterns(int argc, char** argv, int* last_location, Arguments* parsed_arguments);
+int parse_input_file(int argc, char** argv, int* last_location, Arguments* parsed_arguments);
 
 int parse_arguments(int argc, char** argv, Arguments** parsed_arguments){
   Arguments* result = (Arguments*)malloc(sizeof(Arguments));
+
+  if (result == NULL){
+    return ERR_MEM_ALOC;
+  }
+
   int last_location = 1; // skip argv[0]
   int err;
 
   err = parse_options(argc, argv, &last_location, result);
   if (err){
-    return FAILURE;
+    return err;
   }
 
   err = parse_patterns(argc, argv, &last_location, result);
   if (err){
-    return FAILURE;
+    return err;
   }
 
   err = parse_input_file(argc, argv, &last_location, result);
   if (err){
-    return FAILURE;
+    return err;
   }
 
   *parsed_arguments = result;
@@ -31,31 +55,27 @@ int parse_arguments(int argc, char** argv, Arguments** parsed_arguments){
 }
 
 int parse_options(int argc, char** argv, int* last_location, Arguments* parsed_arguments){
-  if (*last_location >= argc){
-    return FAILURE;
-  }
-
 
   OptionList* prev_option;
   while (*last_location < argc && argv[*last_location][0] == '-'){
 
     OptionList* one_option;
-    if (!strcmp("-s", argv[*last_location]) ||
-        !strcmp("--selection-only", argv[*last_location])){
+    int unknown_option = TRUE;
+    int i =0;
+    for (; i< sizeof(all_options)/sizeof(OptionInfo); i++){
 
-      one_option = (OptionList*)malloc(sizeof(OptionList));
-      one_option->opt = SELECTION_ONLY;
+      if (!strcmp(all_options[i].short_str, argv[*last_location]) ||
+        !strcmp(all_options[i].long_str, argv[*last_location])){
 
-    } else if (!strcmp("-h", argv[*last_location]) ||
-        !strcmp("--help", argv[*last_location])) {
+        one_option = (OptionList*)malloc(sizeof(OptionList));
+        one_option->opt = all_options[i].opt;
 
-      one_option = (OptionList*)malloc(sizeof(OptionList));
-      one_option->opt = PRINT_HELP;
-
-    } else {
-
+        unknown_option=FALSE;
+      }
+    }
+    if (unknown_option) {
       // unknown option
-      return FAILURE;
+      return ERR_UNKNOWN_OPTION;
     }
 
     if (parsed_arguments->options_head == NULL) {
@@ -77,24 +97,25 @@ int parse_patterns(int argc, char** argv, int* last_location, Arguments* parsed_
 
   if (strchr(argv[*last_location], ':') == NULL){
     // must provide at least one valid pattern
-    return FAILURE;
+    return ERR_INVALID_PATTERN;
   }
 
   PatternList* prev_pattern;
   while (*last_location < argc && strchr(argv[*last_location], ':') != NULL){
+
     char* arg = (char*)malloc(strlen(argv[*last_location])+1);
     strcpy(arg, argv[*last_location]);
-    char* regexStr=strtok(arg, ":");
-    color c = parse_color(strtok(NULL, ":"));
 
-    if (c == FAILURE){
-      // unknown color
-      return FAILURE;
+    char* regexStr=strtok(arg, ":");
+    color col;
+    int err = parse_color(strtok(NULL, ":"), &col);
+    if (err){
+      return err;
     }
 
     PatternList* one_pattern = (PatternList*)malloc(sizeof(PatternList));
     one_pattern->pattern.regex = regexStr;
-    one_pattern->pattern.col = c;
+    one_pattern->pattern.col = col;
 
     if (parsed_arguments->patterns_head == NULL){
       parsed_arguments->patterns_head = one_pattern;
@@ -117,25 +138,25 @@ int parse_input_file(int argc, char** argv, int* last_location, Arguments* parse
   return SUCCESS;
 }
 
-color parse_color(char* color_str){
+int parse_color(char* color_str, color* parsed_color){
   if (!strcmp("black", color_str)){
-    return black;
+    *parsed_color = black;
   } else if (!strcmp("red", color_str)){
-    return red;
+    *parsed_color = red;
   } else if (!strcmp("green", color_str)){
-    return green;
+    *parsed_color = green;
   } else if (!strcmp("yellow", color_str)){
-    return yellow;
-  } else if (!!strcmp("blue", color_str)) {
-    return blue;
+    *parsed_color = yellow;
+  } else if (!strcmp("blue", color_str)) {
+    *parsed_color = blue;
   } else if (!strcmp("magneta", color_str)){
-    return magneta;
+    *parsed_color = magneta;
   } else if (!strcmp("cyan", color_str)) {
-    return cyan;
+    *parsed_color = cyan;
   } else if (!strcmp("white", color_str)) {
-    return white;
+    *parsed_color = white;
   } else {
-    // unknown color
-    return FAILURE;
+    return ERR_UNKNOWN_COLOR;
   }
+  return SUCCESS;
 }
