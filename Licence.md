@@ -1,6 +1,6 @@
 The MIT License (MIT)
 
-Copyright (c) 2016 Damjan Vukovic (damjanvu@gmail.com, damjanv90 at github) 
+Copyright (c) 2016 Damjan Vukovic (email:damjanvu@gmail.com, github:damjanv90)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

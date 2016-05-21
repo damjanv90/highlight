@@ -1,3 +1,27 @@
+/*
+The MIT License (MIT)
+
+Copyright (c) 2016 Damjan Vukovic (email:damjanvu@gmail.com, github:damjanv90)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -19,10 +43,11 @@ void test_help_short(){
   assert(result == SUCCESS);
 
   assert(parsed->input_file == NULL);
-  assert(parsed->patterns_head == NULL);
-  assert(parsed->options_head != NULL);
-  assert(parsed->options_head->next == NULL);
-  assert(parsed->options_head->opt == PRINT_HELP);
+  assert(parsed->options.first != NULL);
+
+  OptionListItem* first = (OptionListItem*)(parsed->options.first);
+
+  assert(first->opt == PRINT_HELP);
 }
 
 void test_help_long(){
@@ -32,10 +57,11 @@ void test_help_long(){
   assert(result == SUCCESS);
 
   assert(parsed->input_file == NULL);
-  assert(parsed->patterns_head == NULL);
-  assert(parsed->options_head != NULL);
-  assert(parsed->options_head->next == NULL);
-  assert(parsed->options_head->opt == PRINT_HELP);
+  assert(parsed->options.first != NULL);
+
+  OptionListItem* first = (OptionListItem*)(parsed->options.first);
+
+  assert(first->opt == PRINT_HELP);
 }
 
 void test_all_options_short(){
@@ -45,15 +71,23 @@ void test_all_options_short(){
   assert(result == SUCCESS);
 
   assert(parsed->input_file == NULL);
-  assert(parsed->patterns_head == NULL);
-  assert(parsed->options_head != NULL);
-  assert(parsed->options_head->opt == SELECTION_ONLY);
-  assert(parsed->options_head->next != NULL);
-  assert(parsed->options_head->next->opt == BACKGROUND);
-  assert(parsed->options_head->next->next != NULL);
-  assert(parsed->options_head->next->next->opt == PRINT_HELP);
-  assert(parsed->options_head->next->next->next != NULL);
-  assert(parsed->options_head->next->next->next->opt == IGNORE_CASE);
+
+  assert(parsed->options.first != NULL);
+  OptionListItem* first = (OptionListItem*)(parsed->options.first);
+
+  assert(first->item.next != NULL);
+  OptionListItem* second = (OptionListItem*)(first->item.next);
+
+  assert(second->item.next != NULL);
+  OptionListItem* third = (OptionListItem*)(second->item.next);
+
+  assert(third->item.next != NULL);
+  OptionListItem* fourth = (OptionListItem*)(third->item.next);
+
+  assert(first->opt == SELECTION_ONLY);
+  assert(second->opt == BACKGROUND);
+  assert(third->opt == PRINT_HELP);
+  assert(fourth->opt == IGNORE_CASE);
 }
 
 void test_all_options_long(){
@@ -63,15 +97,23 @@ void test_all_options_long(){
   assert(result == SUCCESS);
 
   assert(parsed->input_file == NULL);
-  assert(parsed->patterns_head == NULL);
-  assert(parsed->options_head != NULL);
-  assert(parsed->options_head->opt == SELECTION_ONLY);
-  assert(parsed->options_head->next != NULL);
-  assert(parsed->options_head->next->opt == BACKGROUND);
-  assert(parsed->options_head->next->next != NULL);
-  assert(parsed->options_head->next->next->opt == PRINT_HELP);
-  assert(parsed->options_head->next->next->next != NULL);
-  assert(parsed->options_head->next->next->next->opt == IGNORE_CASE);
+
+  assert(parsed->options.first != NULL);
+  OptionListItem* first = (OptionListItem*)(parsed->options.first);
+
+  assert(first->item.next != NULL);
+  OptionListItem* second = (OptionListItem*)(first->item.next);
+
+  assert(second->item.next != NULL);
+  OptionListItem* third = (OptionListItem*)(second->item.next);
+
+  assert(third->item.next != NULL);
+  OptionListItem* fourth = (OptionListItem*)(third->item.next);
+
+  assert(first->opt == SELECTION_ONLY);
+  assert(second->opt == BACKGROUND);
+  assert(third->opt == PRINT_HELP);
+  assert(fourth->opt == IGNORE_CASE);
 }
 
 void test_one_option_one_pattern(){
@@ -81,13 +123,16 @@ void test_one_option_one_pattern(){
   assert(result == SUCCESS);
 
   assert(parsed->input_file == NULL);
-  assert(parsed->options_head != NULL);
-  assert(parsed->options_head->opt == SELECTION_ONLY);
-  assert(parsed->options_head->next == NULL);
-  assert(parsed->patterns_head != NULL);
-  assert(!strcmp(parsed->patterns_head->pattern.regex, "regex"));
-  assert(parsed->patterns_head->pattern.col == red);
-  assert(parsed->patterns_head->next == NULL);
+  OptionListItem* first_opt = (OptionListItem*)(parsed->options.first);
+
+  assert(first_opt->opt == SELECTION_ONLY);
+  assert(first_opt->item.next == NULL);
+
+  PatternListItem* first_patt = (PatternListItem*)(parsed->patterns.first);
+
+  assert(!strcmp(first_patt->pattern.regex, "regex"));
+  assert(first_patt->pattern.col == red);
+  assert(first_patt->item.next == NULL);
 }
 
 void test_two_patterns(){
@@ -97,13 +142,17 @@ void test_two_patterns(){
   assert(result == SUCCESS);
 
   assert(parsed->input_file == NULL);
-  assert(parsed->options_head == NULL);
-  assert(parsed->patterns_head != NULL);
-  assert(!strcmp(parsed->patterns_head->pattern.regex, "regex1"));
-  assert(parsed->patterns_head->pattern.col == yellow);
-  assert(parsed->patterns_head->next != NULL);
-  assert(!strcmp(parsed->patterns_head->next->pattern.regex, "regex2"));
-  assert(parsed->patterns_head->next->pattern.col == red);
+
+  assert(parsed->patterns.first != NULL);
+  PatternListItem* first = (PatternListItem*)(parsed->patterns.first);
+  assert(first->item.next != NULL);
+  PatternListItem* second = (PatternListItem*)(first->item.next);
+
+  assert(!strcmp(first->pattern.regex, "regex1"));
+  assert(first->pattern.col == yellow);
+  assert(second != NULL);
+  assert(!strcmp(second->pattern.regex, "regex2"));
+  assert(second->pattern.col == red);
 }
 
 void test_two_patterns_filename(){
@@ -113,13 +162,16 @@ void test_two_patterns_filename(){
   assert(result == SUCCESS);
 
   assert(!strcmp(parsed->input_file, "input/file/path"));
-  assert(parsed->options_head == NULL);
-  assert(parsed->patterns_head != NULL);
-  assert(!strcmp(parsed->patterns_head->pattern.regex, "regex1"));
-  assert(parsed->patterns_head->pattern.col == blue);
-  assert(parsed->patterns_head->next != NULL);
-  assert(!strcmp(parsed->patterns_head->next->pattern.regex, "regex2"));
-  assert(parsed->patterns_head->next->pattern.col == green);
+
+  assert(parsed->patterns.first != NULL);
+  PatternListItem* first = (PatternListItem*)(parsed->patterns.first);
+  assert(first->item.next != NULL);
+  PatternListItem* second = (PatternListItem*)(first->item.next);
+
+  assert(!strcmp(first->pattern.regex, "regex1"));
+  assert(first->pattern.col == blue);
+  assert(!strcmp(second->pattern.regex, "regex2"));
+  assert(second->pattern.col == green);
 }
 
 void test_invalid_color(){
@@ -146,7 +198,7 @@ void test_invalid_option(){
   assert(parsed == NULL);
 }
 
-void main(int argc, char** argv){
+int main(int argc, char** argv){
   printf("Started testing arg_parser...\n");
 
   test_no_args();

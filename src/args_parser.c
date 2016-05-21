@@ -1,3 +1,27 @@
+/*
+The MIT License (MIT)
+
+Copyright (c) 2016 Damjan Vukovic (email:damjanvu@gmail.com, github:damjanv90)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 #include <string.h>
 #include <stdlib.h>
 #include "args_parser.h"
@@ -11,13 +35,11 @@ typedef struct OptionInfo{
   const char* long_str;
 }OptionInfo;
 
-#define ADD_OPTION(opt, short_str, long_str) {opt, short_str, long_str}
-
 static const struct OptionInfo all_options[4] = {
-  ADD_OPTION(PRINT_HELP, "-h", "--help"),
-  ADD_OPTION(SELECTION_ONLY, "-s", "--selection-only"),
-  ADD_OPTION(BACKGROUND, "-b", "--background"),
-  ADD_OPTION(IGNORE_CASE, "-i", "--ignore-case")
+  {PRINT_HELP, "-h", "--help"},
+  {SELECTION_ONLY, "-s", "--selection-only"},
+  {BACKGROUND, "-b", "--background"},
+  {IGNORE_CASE, "-i", "--ignore-case"}
 };
 
 int parse_color(char* color_str, color* parsed_color);
@@ -26,11 +48,7 @@ int parse_patterns(int argc, char** argv, int* last_location, Arguments* parsed_
 int parse_input_file(int argc, char** argv, int* last_location, Arguments* parsed_arguments);
 
 int parse_arguments(int argc, char** argv, Arguments** parsed_arguments){
-  Arguments* result = (Arguments*)malloc(sizeof(Arguments));
-
-  if (result == NULL){
-    return ERR_MEM_ALOC;
-  }
+  Arguments* result = (Arguments*)calloc(1, sizeof(Arguments));
 
   int last_location = 1; // skip argv[0]
   int err;
@@ -56,10 +74,9 @@ int parse_arguments(int argc, char** argv, Arguments** parsed_arguments){
 
 int parse_options(int argc, char** argv, int* last_location, Arguments* parsed_arguments){
 
-  OptionList* prev_option;
   while (*last_location < argc && argv[*last_location][0] == '-'){
 
-    OptionList* one_option;
+    OptionListItem* new_option;
     int unknown_option = TRUE;
     int i =0;
     for (; i< sizeof(all_options)/sizeof(OptionInfo); i++){
@@ -67,10 +84,11 @@ int parse_options(int argc, char** argv, int* last_location, Arguments* parsed_a
       if (!strcmp(all_options[i].short_str, argv[*last_location]) ||
         !strcmp(all_options[i].long_str, argv[*last_location])){
 
-        one_option = (OptionList*)malloc(sizeof(OptionList));
-        one_option->opt = all_options[i].opt;
+        new_option = (OptionListItem*)calloc(1, sizeof(OptionListItem));
+        new_option->opt = all_options[i].opt;
 
         unknown_option=FALSE;
+        break;
       }
     }
     if (unknown_option) {
@@ -78,12 +96,7 @@ int parse_options(int argc, char** argv, int* last_location, Arguments* parsed_a
       return ERR_UNKNOWN_OPTION;
     }
 
-    if (parsed_arguments->options_head == NULL) {
-      parsed_arguments->options_head = one_option;
-    } else {
-      prev_option->next = one_option;
-    }
-    prev_option = one_option;
+    append(&(parsed_arguments->options), (BasicItem*)new_option);
     (*last_location)++;
   }
 
@@ -100,29 +113,22 @@ int parse_patterns(int argc, char** argv, int* last_location, Arguments* parsed_
     return ERR_INVALID_PATTERN;
   }
 
-  PatternList* prev_pattern;
   while (*last_location < argc && strchr(argv[*last_location], ':') != NULL){
 
-    char* arg = (char*)malloc(strlen(argv[*last_location])+1);
-    strcpy(arg, argv[*last_location]);
-
+    char* arg = strdup(argv[*last_location]);
     char* regexStr=strtok(arg, ":");
+
     color col;
     int err = parse_color(strtok(NULL, ":"), &col);
     if (err){
       return err;
     }
 
-    PatternList* one_pattern = (PatternList*)malloc(sizeof(PatternList));
-    one_pattern->pattern.regex = regexStr;
-    one_pattern->pattern.col = col;
+    PatternListItem* new_pattern = (PatternListItem*)calloc(1, sizeof(PatternListItem));
+    new_pattern->pattern.regex = regexStr;
+    new_pattern->pattern.col = col;
 
-    if (parsed_arguments->patterns_head == NULL){
-      parsed_arguments->patterns_head = one_pattern;
-    } else {
-      prev_pattern->next = one_pattern;
-    }
-    prev_pattern = one_pattern;
+    append(&(parsed_arguments->patterns), (BasicItem*)new_pattern);
     (*last_location)++;
   }
 

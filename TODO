@@ -1,6 +1,9 @@
 
 Todo:
+    * : file
+    * set style - clear style
+    * free memory
     * modularize regex matcher
     * modularize highlighting
-    
+
 end of file TODO
