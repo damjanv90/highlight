@@ -1,3 +1,27 @@
+/*
+The MIT License (MIT)
+
+Copyright (c) 2016 Damjan Vukovic (email:damjanvu@gmail.com, github:damjanv90)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <regex.h>
@@ -23,7 +47,7 @@ void usage(){
                   "OPTIONS:\n"
                   "  -h, --help\t\tdisplay this help and exit\n"
                   "  -b, --background\t\thighlight background\n"
-                  "  -s, --selection-only\t\thighlight only matched parts of the line, not the whole line\n"
+                  //TODO: uncomment when implemented "  -s, --selection-only\t\thighlight only matched parts of the line, not the whole line\n"
                   "  -i, --ignore-case\t\tignore case in regex match\n\n",
                   VERSION
           );
@@ -31,6 +55,7 @@ void usage(){
 
 int highlight_background = FALSE;
 int ignore_case = FALSE;
+int selection_only = FALSE;
 
 typedef struct pattern {
   regex_t regex;
@@ -40,7 +65,7 @@ typedef struct pattern {
 
 
 PreparedPattern* PreparedPattern_new(char* regexStr, color col){
-  PreparedPattern* newPattern = (PreparedPattern*)malloc(sizeof(PreparedPattern));
+  PreparedPattern* newPattern = (PreparedPattern*)calloc(1, sizeof(PreparedPattern));
 
   /* Compile regular expression */
   int regexCompilationError;
@@ -78,9 +103,61 @@ void prepare_patterns(Arguments* parsed_args, PreparedPattern** patterns){
   }
 }
 
-void highlight(color c, char* text){
-  int format = highlight_background ? c + 40 : c + 30;
-  fprintf(stdout, "\e[1;%dm%s\e[0m", format, text );
+void begin_style(color _color, int highlight_background){
+  int color_style = highlight_background ? _color + 40 : _color + 30;
+
+  fprintf(stdout, "\e[1;%dm", color_style);
+}
+
+void end_style(){
+  fprintf(stdout, "\e[0m");
+}
+
+int remove_eol(char* string){
+  char* new_line_position = strchr(string, '\n');
+  if (new_line_position != NULL){
+    *new_line_position = '\0';
+    return TRUE;
+  }
+  return FALSE;
+}
+
+typedef struct {
+  BasicItem item;
+  int start;
+  int end;
+} Range;
+
+Range* Range_new(int start, int end){
+  Range* range = (Range*)calloc(1, sizeof(Range));
+  range->start = start;
+  range->end = end;
+
+  return range;
+}
+
+void process_range(List* lst, int start, int end){
+  if (is_empty(lst)){
+    append(lst, (BasicItem*)Range_new(start, end));
+  } else {
+    Range* range;
+    for (range = (Range*)lst->first; range != NULL; range = (Range*)range->item.next) {
+      if (end < range->start){
+        add_before(lst, (BasicItem*)range, (BasicItem*)Range_new(start, end));
+      } else if (start <= range->end) {
+        if (start < range->start){
+          range->start = start;
+        }
+        if (end > range->end){
+          range->end = end;
+        }
+      } else {
+        append (lst, (BasicItem*)Range_new(start, end));
+      }
+    }
+  }
+
+
 }
 
 int main(int argc, char** argv){
@@ -104,7 +181,7 @@ int main(int argc, char** argv){
         exit(EXIT_SUCCESS);
 
       case SELECTION_ONLY:
-        // TODO: implement
+        selection_only = TRUE;
         break;
 
       case BACKGROUND:
@@ -145,56 +222,72 @@ int main(int argc, char** argv){
     }
   }
 
+  List match_ranges = EMPTY_LST;
   char * line = NULL;
   size_t len = 0;
   int has_input;
 
+  //TODO: remove feof
   has_input = !feof(in) && getline(&line, &len, in) != -1;
   while (has_input){
-    int matches = FALSE;
+
     PreparedPattern* onePattern;
+    color _color;
     for (onePattern = patterns; onePattern; onePattern = onePattern->next){
-      /* Execute regular expression */
-      int regexResult = regexec(&(onePattern->regex), line, 0, NULL, 0);
+      // Execute regular expression
+      regmatch_t pmatch[onePattern->regex.re_nsub + 1];
+      int regexResult = regexec(&(onePattern->regex), line, onePattern->regex.re_nsub + 1, pmatch, 0);
       if (!regexResult) {
-          int should_insert_new_line = FALSE;
-          char* new_line_position = strchr(line, '\n');
-          if (new_line_position != NULL){
-            *new_line_position = '\0';
-            should_insert_new_line = TRUE;
+          // ######### MATCH! ###########
+          if (selection_only){
+            int i = 0;
+            if (onePattern->regex.re_nsub > 0){
+              // there are subexpressions so skip the whole expression
+              i = 1;
+            }
+            for(; i < onePattern->regex.re_nsub + 1; i++){
+              process_range(&match_ranges, pmatch[i].rm_so, pmatch[i].rm_eo);
+            }
+          }else{
+            append(&match_ranges, (BasicItem*)Range_new(0, strlen(line)));
           }
-          highlight(onePattern->col, line );
-          if (should_insert_new_line){
-            fprintf(stdout, "\n");
-          }
-          matches = TRUE;
+
+          _color = onePattern->col;
           break;
+
       } else if(regexResult != REG_NOMATCH) {
-          //TODO: vidjeti sta radi ova regerror
           regerror(regexResult, &(onePattern->regex), line, len);
           fprintf(stderr, "Regex match failed: %s\n", line);
           exit(EXIT_FAILURE);
       }
     }
 
-    if (!matches){
-      fprintf(stdout, "%s", line );
+    remove_eol(line);
+    int line_length = strlen(line);
+    int indx = 0;
+    Range* range;
+    for (range = (Range*)match_ranges.first; range != NULL; range = (Range*)range->item.next){
+      while (indx < line_length && indx < range->start ){
+        fprintf(stdout, "%c", line[indx]);
+        indx++;
+      }
+      while (indx < line_length && indx < range->end ){
+        begin_style(_color, highlight_background);
+        fprintf(stdout, "%c", line[indx]);
+        end_style();
+        indx++;
+      }
+    }
+    while (indx < line_length){
+      fprintf(stdout, "%c", line[indx]);
+      indx++;
     }
 
+    clear((List*)(&match_ranges));
+
+    fprintf(stdout, "\n");
+
     has_input = !feof(in) && getline(&line, &len, in) != -1;
-  }
-
-  // Free memory allocated to the pattern buffer by regcomp()
-  PreparedPattern* p=patterns;
-  while (p != NULL){
-    regfree(&(p->regex));
-    PreparedPattern* tmp = p;
-    p = p->next;
-    free(tmp);
-  }
-
-  if (line){
-    free (line);
   }
 
   return SUCCESS;

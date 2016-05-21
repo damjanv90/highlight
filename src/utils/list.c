@@ -25,6 +25,8 @@ SOFTWARE.
 #include <stdlib.h>
 #include "list.h"
 
+const List EMPTY_LST = {NULL, NULL};
+
 int append(List* lst, BasicItem* item){
   if (lst == NULL || item == NULL){
     return -1;
@@ -33,9 +35,40 @@ int append(List* lst, BasicItem* item){
   if (lst->first == NULL){
     lst->first = item;
   } else {
+    item->prev = lst->last;
     lst->last->next = item;
   }
   lst->last = item;
 
   return 0;
+}
+
+int add_before(List* lst, BasicItem* before, BasicItem* new_item){
+  before->prev->next = new_item;
+  new_item->prev = before->prev;
+  new_item->next = before;
+  before->prev = new_item;
+}
+
+int is_empty(List* lst){
+  return lst == NULL || lst->first == NULL;
+}
+
+void clear(List* lst){
+  if (is_empty(lst)){
+    return;
+  }
+
+  BasicItem* item = lst->first;
+  while (item != NULL){
+    BasicItem* tmp = item;
+    if (item->next != NULL){
+      item->next->prev = NULL;
+    }
+    item = item->next;
+    free(tmp);
+  }
+
+  lst->first = NULL;
+  lst->last = NULL;
 }

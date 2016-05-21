@@ -28,6 +28,7 @@ SOFTWARE.
 
 
   typedef struct basic_item {
+    struct basic_item* prev;
     struct basic_item* next;
   } BasicItem;
 
@@ -36,6 +37,14 @@ SOFTWARE.
     BasicItem* last;
   } List;
 
+  extern const List EMPTY_LST;
+
+  int add_before(List* lst, BasicItem* before, BasicItem* new_item);
+
   int append(List* lst, BasicItem* item);
+
+  int is_empty(List* lst);
+
+  void clear(List* lst);
 
 #endif
