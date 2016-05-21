@@ -7,6 +7,7 @@
 #include "args_parser.h"
 #include "errors.h"
 #include "bool.h"
+#include "utils/list.h"
 
 void usage(){
   fprintf(stdout,
@@ -62,7 +63,7 @@ PreparedPattern* PreparedPattern_new(char* regexStr, color col){
 void prepare_patterns(Arguments* parsed_args, PreparedPattern** patterns){
   PreparedPattern* prev = NULL;
 
-  PatternList* raw_pattern = parsed_args->patterns_head;
+  PatternListItem* raw_pattern = (PatternListItem*)parsed_args->patterns.first;
   while (raw_pattern != NULL){
     PreparedPattern* newPattern = PreparedPattern_new(raw_pattern->pattern.regex, raw_pattern->pattern.col);
 
@@ -73,7 +74,7 @@ void prepare_patterns(Arguments* parsed_args, PreparedPattern** patterns){
       *patterns = newPattern;
     }
     prev = newPattern;
-    raw_pattern = raw_pattern->next;
+    raw_pattern = (PatternListItem*)raw_pattern->item.next;
   }
 }
 
@@ -93,7 +94,7 @@ int main(int argc, char** argv){
     exit(EXIT_FAILURE);
   }
 
-  OptionList* opt = parsed_args->options_head;
+  OptionListItem* opt = (OptionListItem*)parsed_args->options.first;
   while (opt != NULL){
 
     switch (opt->opt){
@@ -120,10 +121,10 @@ int main(int argc, char** argv){
         exit(EXIT_FAILURE);
     }
 
-    opt = opt->next;
+    opt = (OptionListItem*)opt->item.next;
   }
 
-  if (parsed_args->patterns_head == NULL){
+  if (parsed_args->patterns.first == NULL){
     fprintf(stderr, "You must provide at least one valid pattern\n\n");
     usage();
     exit(EXIT_SUCCESS);
