@@ -44,10 +44,27 @@ int append(List* lst, BasicItem* item){
 }
 
 int add_before(List* lst, BasicItem* before, BasicItem* new_item){
-  before->prev->next = new_item;
+  if (before->prev == NULL) {
+    lst->first = new_item;
+  } else {
+    before->prev->next = new_item;
+  }
+
   new_item->prev = before->prev;
-  new_item->next = before;
   before->prev = new_item;
+  new_item->next = before;
+}
+
+void remove_after(List* lst, BasicItem* item) {
+  BasicItem* to_remove = item->next;
+
+  if (lst->last == to_remove){
+    lst->last = to_remove->prev;
+  }
+
+  to_remove->next->prev = item;
+  item->next = to_remove->next;
+  free(to_remove);
 }
 
 int is_empty(List* lst){

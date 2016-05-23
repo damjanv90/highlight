@@ -43,6 +43,8 @@ SOFTWARE.
 
   int append(List* lst, BasicItem* item);
 
+  void remove_after(List* lst, BasicItem* item);
+
   int is_empty(List* lst);
 
   void clear(List* lst);

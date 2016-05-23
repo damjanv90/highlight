@@ -126,39 +126,94 @@ typedef struct {
   BasicItem item;
   int start;
   int end;
+  color _color;
+  int priority;
 } Range;
 
-Range* Range_new(int start, int end){
+Range* Range_new(int start, int end, color _color, int priority){
   Range* range = (Range*)calloc(1, sizeof(Range));
   range->start = start;
   range->end = end;
+  range->_color = _color;
+  range->priority = priority;
 
   return range;
 }
 
-void process_range(List* lst, int start, int end){
+void expand_range_right(List* lst, Range* range, int expand_to, color _color, int priority){
+  if (priority > range->priority){
+    range->priority = priority;
+    range->_color = _color;
+  }
+  range->end = expand_to;
+  while (range->item.next != NULL){
+    Range* next = (Range*)range->item.next;
+    if (expand_to > next->start){
+      // range is expanding over next so we will either merge them or shrink one
+      if (range->priority < next->priority){
+        // range is lesser priority so we will shrink it
+        range->end = next->start - 1;
+      } else {
+        if (range->priority > next->priority && range->end < next->end) {
+          // range is higher priority so we will shrink next
+          next->start = range->end + 1;
+        } else {
+          // ranges are either of same priority or range is eating the whole next
+          // in either case we should remove next, and repeat iteration
+          remove_after(lst, (BasicItem*)range);
+          // let's go to next range and see if we can expand more
+          continue;
+        }
+      }
+    }
+    break;
+  }
+}
+
+void expand_range(List* lst, Range* range, int start, int end, color _color, int priority){
+  if (start < range->start){
+    if (priority >= range->priority) {
+      // expand range to left
+      range->start = start;
+      range->_color = _color;
+      range->priority = priority;
+    } else {
+      add_before(lst, (BasicItem*)range, (BasicItem*)Range_new(start, range->start - 1, _color, priority));
+    }
+  }
+  if (priority >= range->priority && end > range->end){
+    expand_range_right(lst, range, end, _color, priority);
+  }
+}
+
+void process_range(List* lst, int start, int end, color _color, int priority){
   if (is_empty(lst)){
-    append(lst, (BasicItem*)Range_new(start, end));
+    append(lst, (BasicItem*)Range_new(start, end, _color, priority));
   } else {
     Range* range;
     for (range = (Range*)lst->first; range != NULL; range = (Range*)range->item.next) {
       if (end < range->start){
-        add_before(lst, (BasicItem*)range, (BasicItem*)Range_new(start, end));
+        add_before(lst, (BasicItem*)range, (BasicItem*)Range_new(start, end, _color, priority));
       } else if (start <= range->end) {
-        if (start < range->start){
-          range->start = start;
-        }
-        if (end > range->end){
-          range->end = end;
-        }
-      } else {
-        append (lst, (BasicItem*)Range_new(start, end));
+        expand_range(lst, range, start, end, _color, priority);
       }
+
+      if (end > range->end){
+        // there are leftovers
+        start = start > range->end ? start : range->end + 1;
+        if (range->item.next == NULL){
+          append (lst, (BasicItem*)Range_new(start, end, _color, priority));
+        } else {
+          // there is next range, so check if that can be expanded
+          continue;
+        }
+      }
+      break;
     }
   }
-
-
 }
+
+
 
 int main(int argc, char** argv){
 
@@ -230,10 +285,9 @@ int main(int argc, char** argv){
   //TODO: remove feof
   has_input = !feof(in) && getline(&line, &len, in) != -1;
   while (has_input){
-
+    int priority = 0;
     PreparedPattern* onePattern;
-    color _color;
-    for (onePattern = patterns; onePattern; onePattern = onePattern->next){
+    for (onePattern = patterns; onePattern; onePattern = onePattern->next, priority--){
       // Execute regular expression
       regmatch_t pmatch[onePattern->regex.re_nsub + 1];
       int regexResult = regexec(&(onePattern->regex), line, onePattern->regex.re_nsub + 1, pmatch, 0);
@@ -246,14 +300,12 @@ int main(int argc, char** argv){
               i = 1;
             }
             for(; i < onePattern->regex.re_nsub + 1; i++){
-              process_range(&match_ranges, pmatch[i].rm_so, pmatch[i].rm_eo);
+              process_range(&match_ranges, pmatch[i].rm_so, pmatch[i].rm_eo - 1, onePattern->col, priority);
             }
           }else{
-            append(&match_ranges, (BasicItem*)Range_new(0, strlen(line)));
+            process_range(&match_ranges, 0, strlen(line), onePattern->col, priority);
+            break;
           }
-
-          _color = onePattern->col;
-          break;
 
       } else if(regexResult != REG_NOMATCH) {
           regerror(regexResult, &(onePattern->regex), line, len);
@@ -271,8 +323,8 @@ int main(int argc, char** argv){
         fprintf(stdout, "%c", line[indx]);
         indx++;
       }
-      while (indx < line_length && indx < range->end ){
-        begin_style(_color, highlight_background);
+      while (indx < line_length && indx <= range->end ){
+        begin_style(range->_color, highlight_background);
         fprintf(stdout, "%c", line[indx]);
         end_style();
         indx++;
