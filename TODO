@@ -2,7 +2,6 @@
 Todo:
     * add tests for list
     * add tests for range
-    * extract range
     * SELECTION_ONLY
     * options don't have to be first thing
     * files can contain ":"

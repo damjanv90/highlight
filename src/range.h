@@ -22,46 +22,21 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef ARGS_PARSER_H
+#ifndef RANGE_H
 
-  #define ARGS_PARSER_H
+  #define RANGE_H
 
   #include "utils/list.h"
   #include "color.h"
 
-
-  // ########## PATTERNS #################
-
-  typedef struct {
-    char* regex;
-    color col;
-  } Pattern;
-
   typedef struct {
     BasicItem item;
-    Pattern pattern;
-  } PatternListItem;
+    int start;
+    int end;
+    color _color;
+    int priority;
+  } Range;
 
-  // ########## PATTERNS #################
-
-
-  // ########## OPTIONS #################
-
-  typedef enum {PRINT_HELP, SELECTION_ONLY, BACKGROUND, IGNORE_CASE} option;
-
-  typedef struct {
-    BasicItem item;
-    option opt;
-  } OptionListItem;
-
-  // ########## OPTIONS #################
-
-  typedef struct{
-    List options;
-    List patterns;
-    char* input_file;
-  } Arguments;
-
-  int parse_arguments(int argc, char** argv, Arguments** parsed_arguments);
+void process_range(List* lst, int start, int end, color _color, int priority);
 
 #endif
