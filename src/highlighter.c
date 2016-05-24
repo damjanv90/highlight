@@ -30,7 +30,7 @@ SOFTWARE.
 #include "settings.h"
 #include "args_parser.h"
 #include "errors.h"
-#include "bool.h"
+#include "utils/bool.h"
 #include "utils/list.h"
 #include "color.h"
 #include "range.h"

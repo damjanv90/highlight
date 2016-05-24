@@ -44,6 +44,10 @@ int append(List* lst, BasicItem* item){
 }
 
 int add_before(List* lst, BasicItem* before, BasicItem* new_item){
+  if (lst == NULL || before == NULL || new_item == NULL){
+    return -1;
+  }
+
   if (before->prev == NULL) {
     lst->first = new_item;
   } else {
@@ -53,6 +57,8 @@ int add_before(List* lst, BasicItem* before, BasicItem* new_item){
   new_item->prev = before->prev;
   before->prev = new_item;
   new_item->next = before;
+
+  return 0;
 }
 
 void remove_after(List* lst, BasicItem* item) {

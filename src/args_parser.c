@@ -26,7 +26,7 @@ SOFTWARE.
 #include <stdlib.h>
 #include "args_parser.h"
 #include "errors.h"
-#include "bool.h"
+#include "utils/bool.h"
 
 
 typedef struct OptionInfo{

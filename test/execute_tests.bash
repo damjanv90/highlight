@@ -24,8 +24,12 @@
 
 rm -rf ./execution
 mkdir ./execution
+
 clang -o ./execution/test_arg_parser test_arg_parser.c ../src/args_parser.c ../src/utils/list.c ../src/range.c
 ./execution/test_arg_parser
+
+clang -o ./execution/test_list test_list.c ../src/utils/list.c
+./execution/test_list
 
 (cd ..; exec ./build.bash);
 
