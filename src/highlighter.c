@@ -70,7 +70,7 @@ PreparedPattern* PreparedPattern_new(char* regexStr, color col, int regex_flags)
   PreparedPattern* newPattern = (PreparedPattern*)calloc(1, sizeof(PreparedPattern));
 
   // Compile regular expression
-  int regexCompilationError = regcomp(&(newPattern->regex), regexStr, compilation_flags);
+  int regexCompilationError = regcomp(&(newPattern->regex), regexStr, regex_flags);
   if (regexCompilationError) {
       fprintf(stderr, "Could not compile regex\n%s\n", regexStr);
       exit(EXIT_FAILURE);
@@ -90,6 +90,8 @@ List* prepare_patterns(Arguments* parsed_args, int regex_flags){
 
     raw_pattern = (PatternListItem*)raw_pattern->item.next;
   }
+
+  return result;
 }
 
 void begin_style(color _color, int highlight_background){
@@ -116,7 +118,7 @@ void handle_options(List* options){
     return;
   }
 
-  OptionListItem* opt = (OptionListItem*)options.first;
+  OptionListItem* opt = (OptionListItem*)options->first;
   while (opt != NULL){
 
     switch (opt->opt){
@@ -190,7 +192,7 @@ int main(int argc, char** argv){
   while (has_input){
     int priority = 0;
     PreparedPattern* onePattern;
-    for (onePattern = patterns->first; onePattern; onePattern = (PreparedPattern*)onePattern->item.next, priority--){
+    for (onePattern = (PreparedPattern*)patterns->first; onePattern; onePattern = (PreparedPattern*)onePattern->item.next, priority--){
       // Execute regular expression
       regmatch_t pmatch[onePattern->regex.re_nsub + 1];
       int regexResult = regexec(&(onePattern->regex), line, onePattern->regex.re_nsub + 1, pmatch, 0);
