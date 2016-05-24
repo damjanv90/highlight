@@ -244,7 +244,7 @@ int main(int argc, char** argv){
       indx++;
     }
 
-    clear((List*)(&match_ranges));
+    clear(&match_ranges);
 
     fprintf(stdout, "\n");
 
