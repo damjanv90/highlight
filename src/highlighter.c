@@ -56,51 +56,38 @@ void usage(){
 }
 
 int highlight_background = FALSE;
-int ignore_case = FALSE;
+int regex_flags = 0;
 int selection_only = FALSE;
 
-typedef struct pattern {
+typedef struct {
+  BasicItem item;
   regex_t regex;
   color col;
-  struct pattern* next;
 }PreparedPattern;
 
 
-PreparedPattern* PreparedPattern_new(char* regexStr, color col){
+PreparedPattern* PreparedPattern_new(char* regexStr, color col, int regex_flags){
   PreparedPattern* newPattern = (PreparedPattern*)calloc(1, sizeof(PreparedPattern));
 
-  /* Compile regular expression */
-  int regexCompilationError;
-  int compilation_flags = 0;
-  if (ignore_case){
-    compilation_flags |= REG_ICASE;
-  }
-  regexCompilationError = regcomp(&(newPattern->regex), regexStr, compilation_flags);
+  // Compile regular expression
+  int regexCompilationError = regcomp(&(newPattern->regex), regexStr, compilation_flags);
   if (regexCompilationError) {
       fprintf(stderr, "Could not compile regex\n%s\n", regexStr);
       exit(EXIT_FAILURE);
   }
   newPattern->col=col;
-  newPattern->next = NULL;
 
   return newPattern;
 }
 
 
-void prepare_patterns(Arguments* parsed_args, PreparedPattern** patterns){
-  PreparedPattern* prev = NULL;
+List* prepare_patterns(Arguments* parsed_args, int regex_flags){
+  List* result = (List*)calloc(1, sizeof(List));
 
   PatternListItem* raw_pattern = (PatternListItem*)parsed_args->patterns.first;
   while (raw_pattern != NULL){
-    PreparedPattern* newPattern = PreparedPattern_new(raw_pattern->pattern.regex, raw_pattern->pattern.col);
+    append(result, (BasicItem*)PreparedPattern_new(raw_pattern->pattern.regex, raw_pattern->pattern.col, regex_flags));
 
-    if (prev != NULL){
-      prev->next = newPattern;
-    } else {
-      // first
-      *patterns = newPattern;
-    }
-    prev = newPattern;
     raw_pattern = (PatternListItem*)raw_pattern->item.next;
   }
 }
@@ -124,18 +111,12 @@ int remove_eol(char* string){
   return FALSE;
 }
 
-int main(int argc, char** argv){
-
-  Arguments* parsed_args;
-  int args_err = parse_arguments(argc, argv, &parsed_args);
-
-  if (args_err){
-    fprintf(stderr, "\n\nError parsing input arguments: %d\n\n", args_err);
-    usage();
-    exit(EXIT_FAILURE);
+void handle_options(List* options){
+  if (is_empty(options)){
+    return;
   }
 
-  OptionListItem* opt = (OptionListItem*)parsed_args->options.first;
+  OptionListItem* opt = (OptionListItem*)options.first;
   while (opt != NULL){
 
     switch (opt->opt){
@@ -153,7 +134,7 @@ int main(int argc, char** argv){
         break;
 
       case IGNORE_CASE:
-        ignore_case = TRUE;
+        regex_flags |= REG_ICASE;
         break;
 
       default:
@@ -164,6 +145,20 @@ int main(int argc, char** argv){
 
     opt = (OptionListItem*)opt->item.next;
   }
+}
+
+int main(int argc, char** argv){
+
+  Arguments* parsed_args;
+  int args_err = parse_arguments(argc, argv, &parsed_args);
+
+  if (args_err){
+    fprintf(stderr, "\n\nError parsing input arguments: %d\n\n", args_err);
+    usage();
+    exit(EXIT_FAILURE);
+  }
+
+  handle_options(&parsed_args->options);
 
   if (parsed_args->patterns.first == NULL){
     fprintf(stderr, "You must provide at least one valid pattern\n\n");
@@ -171,8 +166,7 @@ int main(int argc, char** argv){
     exit(EXIT_SUCCESS);
   }
 
-  PreparedPattern* patterns;
-  prepare_patterns(parsed_args, &patterns);
+  List* patterns = prepare_patterns(parsed_args, regex_flags);
 
   FILE* in;
   if (parsed_args->input_file == NULL){
@@ -196,7 +190,7 @@ int main(int argc, char** argv){
   while (has_input){
     int priority = 0;
     PreparedPattern* onePattern;
-    for (onePattern = patterns; onePattern; onePattern = onePattern->next, priority--){
+    for (onePattern = patterns->first; onePattern; onePattern = (PreparedPattern*)onePattern->item.next, priority--){
       // Execute regular expression
       regmatch_t pmatch[onePattern->regex.re_nsub + 1];
       int regexResult = regexec(&(onePattern->regex), line, onePattern->regex.re_nsub + 1, pmatch, 0);
