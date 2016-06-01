@@ -23,6 +23,7 @@ SOFTWARE.
 */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <assert.h>
 #include "../src/utils/list.h"
 #include "../src/utils/bool.h"
@@ -31,9 +32,6 @@ void test_add_before_first(){
   List lst = EMPTY_LST;
   BasicItem first ={NULL, NULL};
   append(&lst, &first);
-  assert(is_empty(&lst) == FALSE);
-  assert(lst.first == &first);
-  assert(lst.last == &first);
 
   BasicItem before_first={NULL, NULL};
   add_before(&lst, &first, &before_first);
@@ -49,19 +47,9 @@ void test_add_before_second(){
   List lst = EMPTY_LST;
   BasicItem first={NULL, NULL};
   append(&lst, &first);
-  assert(is_empty(&lst) == FALSE);
-  assert(lst.first == &first);
-  assert(lst.last == &first);
 
   BasicItem second={NULL, NULL};
   append(&lst, &second);
-
-  assert(lst.last == &second);
-  assert(lst.first == &first);
-  assert(lst.first->next == &second);
-  assert(first.prev == NULL);
-  assert(second.prev == &first);
-  assert(second.next == NULL);
 
   BasicItem before_second={NULL, NULL};
   add_before(&lst, &second, &before_second);
@@ -81,34 +69,148 @@ void test_add_before(){
   test_add_before_second();
 }
 
-// void test_append(){
-//   test_append_empty();
-//   test_append_one_item();
-// }
-//
-// void test_remove_after(){
-//   test_remove_after_last();
-//   test_remove_last();
-// }
-//
-// void test_is_empty(){
-//   test_is_empty_empty();
-//   test_is_empty_null();
-//   test_is_empty_one_item();
-// }
-//
-// void test_clear_list(){
-//   test_clear_empty_list();
-//   test_clear_null_list();
-//   test_clear_one_item_list();
-//   test_clear_two_item_list();
-// }
+void test_append_empty(){
+  List lst = EMPTY_LST;
+  BasicItem first ={NULL, NULL};
+  append(&lst, &first);
+  assert(is_empty(&lst) == FALSE);
+  assert(lst.first == &first);
+  assert(lst.last == &first);
+  assert(lst.first->next == NULL);
+  assert(lst.first->prev == NULL);
+}
 
+void test_append_one_item(){
+  List lst = EMPTY_LST;
+  BasicItem first={NULL, NULL};
+  append(&lst, &first);
+
+  BasicItem second={NULL, NULL};
+  append(&lst, &second);
+
+  assert(is_empty(&lst) == FALSE);
+  assert(lst.first == &first);
+  assert(lst.last == &second);
+  assert(lst.first->next == &second);
+  assert(lst.first->prev == NULL);
+  assert(lst.last->prev == &first);
+  assert(lst.last->next == NULL);
+}
+
+void test_append(){
+  test_append_empty();
+  test_append_one_item();
+}
+
+void test_remove_last(){
+  List lst = EMPTY_LST;
+  BasicItem first={NULL, NULL};
+  append(&lst, &first);
+
+  BasicItem* second = (BasicItem*)calloc(1, sizeof(BasicItem));
+  append(&lst, second);
+
+  remove_after(&lst, &first);
+  assert(is_empty(&lst) == FALSE);
+  assert(lst.first == &first);
+  assert(lst.last == &first);
+  assert(lst.first->next == NULL);
+  assert(lst.first->prev == NULL);
+}
+
+void test_remove_after_last(){
+  List lst = EMPTY_LST;
+  BasicItem first={NULL, NULL};
+  append(&lst, &first);
+
+  BasicItem second={NULL, NULL};
+  append(&lst, &second);
+
+  remove_after(&lst, &second);
+  assert(is_empty(&lst) == FALSE);
+  assert(lst.first == &first);
+  assert(lst.last == &second);
+  assert(lst.first->next == &second);
+  assert(lst.first->prev == NULL);
+  assert(lst.last->prev == &first);
+  assert(lst.last->next == NULL);
+}
+
+void test_remove_after(){
+  test_remove_after_last();
+  test_remove_last();
+}
+
+void test_is_empty_empty(){
+    List lst = EMPTY_LST;
+    assert(is_empty(&lst) == TRUE);
+}
+
+void test_is_empty_null(){
+  List* lst = NULL;
+  assert(is_empty(lst) == TRUE);
+}
+
+void test_is_empty_one_item(){
+  List lst = EMPTY_LST;
+  BasicItem first={NULL, NULL};
+  append(&lst, &first);
+  assert(is_empty(&lst) == FALSE);
+}
+
+void test_is_empty(){
+  test_is_empty_empty();
+  test_is_empty_null();
+  test_is_empty_one_item();
+}
+
+void test_clear_empty_list(){
+  List lst = EMPTY_LST;
+  clear(&lst);
+  assert(is_empty(&lst)==TRUE);
+}
+
+void test_clear_null_list(){
+  List* lst = NULL;
+  clear(lst);
+  assert(is_empty(lst)==TRUE);
+}
+
+void test_clear_one_item_list(){
+  List lst = EMPTY_LST;
+  BasicItem* first = (BasicItem*)calloc(1, sizeof(BasicItem));
+  append(&lst, first);
+  clear(&lst);
+  assert(is_empty(&lst)==TRUE);
+}
+
+void test_clear_two_item_list(){
+  List lst = EMPTY_LST;
+  BasicItem* first = (BasicItem*)calloc(1, sizeof(BasicItem));
+  append(&lst, first);
+
+  BasicItem* second = (BasicItem*)calloc(1, sizeof(BasicItem));
+  append(&lst, second);
+
+  clear(&lst);
+  assert(is_empty(&lst)==TRUE);
+}
+
+void test_clear_list(){
+  test_clear_empty_list();
+  test_clear_null_list();
+  test_clear_one_item_list();
+  test_clear_two_item_list();
+}
 
 int main(int argc, char** argv){
   printf("Started testing list...\n");
 
   test_add_before();
+  test_remove_after();
+  test_append();
+  test_is_empty();
+  test_clear_list();
 
   printf("Finished testing list SUCCESSFULY!\n\n");
 }

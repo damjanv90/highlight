@@ -64,11 +64,17 @@ int add_before(List* lst, BasicItem* before, BasicItem* new_item){
 void remove_after(List* lst, BasicItem* item) {
   BasicItem* to_remove = item->next;
 
+  if (to_remove == NULL) {
+    return;
+  }
+
   if (lst->last == to_remove){
     lst->last = to_remove->prev;
   }
 
-  to_remove->next->prev = item;
+  if (to_remove->next != NULL){
+    to_remove->next->prev = item;
+  }
   item->next = to_remove->next;
   free(to_remove);
 }
