@@ -39,17 +39,17 @@ void usage(){
   fprintf(stdout,
                   "\nhighlight v%s\n\n"
 
-                  "Usage: highlight [OPTIONS...] PATTERN... [FILE]\n"
-                  "Example: highlight ERROR:red WARN:yellow debug.log\n\n"
+                  "Usage: highlight [OPTIONS...] [FILE]\n"
+                  "Example: highlight -p ERROR red -p WARN yellow debug.log\n\n"
 
-                  "PATTERN\t\tREGEX:COLOR\n"
-                  "  REGEX\t\ta regular expression\n"
-                  "  COLOR\t\tred, yellow, green, blue, white\n"
                   "FILE\t\ta path to an input text file\n"
-                  "OPTIONS:\n"
+                  "OPTIONS\n"
+                  "  -p, --pattern REGEX COLOR\n"
+                  "\tREGEX\tRegular expression\n"
+                  "\tCOLOR\tColor to be used for highlighting of the given REGEX (one of red, green, yellow, blue, magneta, cyan, white; you can also use just the first char, e.g. red=r)\n"
                   "  -h, --help\t\tdisplay this help and exit\n"
                   "  -b, --background\t\thighlight background\n"
-                  //TODO: uncomment when implemented "  -s, --selection-only\t\thighlight only matched parts of the line, not the whole line\n"
+                  "  -s, --selection-only\t\thighlight only matched parts of the line, not the whole line\n"
                   "  -i, --ignore-case\t\tignore case in regex match\n\n",
                   VERSION
           );
@@ -86,7 +86,7 @@ List* prepare_patterns(Arguments* parsed_args, int regex_flags){
 
   PatternListItem* raw_pattern = (PatternListItem*)parsed_args->patterns.first;
   while (raw_pattern != NULL){
-    append(result, (BasicItem*)PreparedPattern_new(raw_pattern->pattern.regex, raw_pattern->pattern.col, regex_flags));
+    append(result, (BasicItem*)PreparedPattern_new(raw_pattern->pattern.regex, raw_pattern->pattern.col, REG_EXTENDED|regex_flags));
 
     raw_pattern = (PatternListItem*)raw_pattern->item.next;
   }

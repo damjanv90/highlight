@@ -118,8 +118,8 @@ void test_all_options_long(){
 
 void test_one_option_one_pattern(){
   Arguments* parsed = NULL;
-  char* test[] = {"test", "-s", "regex:red"};
-  int result = parse_arguments(3, test, &parsed);
+  char* test[] = {"test", "-s", "-p", "regex", "red"};
+  int result = parse_arguments(5, test, &parsed);
   assert(result == SUCCESS);
 
   assert(parsed->input_file == NULL);
@@ -137,8 +137,8 @@ void test_one_option_one_pattern(){
 
 void test_two_patterns(){
   Arguments* parsed = NULL;
-  char* test[] = {"test", "regex1:yellow", "regex2:red"};
-  int result = parse_arguments(3, test, &parsed);
+  char* test[] = {"test", "-p", "regex1", "yellow", "-p", "regex2", "red"};
+  int result = parse_arguments(7, test, &parsed);
   assert(result == SUCCESS);
 
   assert(parsed->input_file == NULL);
@@ -157,8 +157,8 @@ void test_two_patterns(){
 
 void test_two_patterns_filename(){
   Arguments* parsed = NULL;
-  char* test[] = {"test", "regex1:blue", "regex2:green", "input/file/path"};
-  int result = parse_arguments(4, test, &parsed);
+  char* test[] = {"test", "-p", "regex1", "blue", "-p", "regex2", "green", "input/file/path"};
+  int result = parse_arguments(8, test, &parsed);
   assert(result == SUCCESS);
 
   assert(!strcmp(parsed->input_file, "input/file/path"));
@@ -176,16 +176,16 @@ void test_two_patterns_filename(){
 
 void test_invalid_color(){
   Arguments* parsed = NULL;
-  char* test[] = {"test", "regex1:invalid_color"};
-  int result = parse_arguments(2, test, &parsed);
+  char* test[] = {"test", "-p", "regex1", "invalid_color"};
+  int result = parse_arguments(4, test, &parsed);
   assert(result == ERR_UNKNOWN_COLOR);
   assert(parsed == NULL);
 }
 
 void test_invalid_pattern(){
   Arguments* parsed = NULL;
-  char* test[] = {"test", "regex-red"};
-  int result = parse_arguments(2, test, &parsed);
+  char* test[] = {"test", "-p", "regex"};
+  int result = parse_arguments(3, test, &parsed);
   assert(result == ERR_INVALID_PATTERN);
   assert(parsed == NULL);
 }

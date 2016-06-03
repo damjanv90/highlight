@@ -47,7 +47,7 @@ SOFTWARE.
 
   // ########## OPTIONS #################
 
-  typedef enum {PRINT_HELP, SELECTION_ONLY, BACKGROUND, IGNORE_CASE} option;
+  typedef enum {PRINT_HELP, SELECTION_ONLY, BACKGROUND, IGNORE_CASE, PATTERN} option;
 
   typedef struct {
     BasicItem item;
