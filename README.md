@@ -13,7 +13,8 @@ Linux shell program that highlights lines that match given regular expressions.
 
             REGEX   Regular expression (extended)
 
-            COLOR   Color to be used for highlighting of the given REGEX (one of red, green, yellow, blue, magneta, cyan, white; you can also use just the first char, e.g. red=r)
+            COLOR   Color to be used for highlighting of the given REGEX
+                    (one of red, green, yellow, blue, magneta, cyan, white; you can also use just the first char, e.g. red=r)
 
       -h, --help                    display this help and exit
 
