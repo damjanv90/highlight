@@ -1,12 +1,6 @@
 
 Todo:
-    * add tests for list
     * add tests for range
-    * SELECTION_ONLY
-    * options don't have to be first thing
-    * files can contain ":"
-    * modularize regex matcher
-    * modularize highlighting
     * coding style
 
 end of file TODO
