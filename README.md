@@ -1,6 +1,5 @@
 # highlight
 Linux shell program that highlights lines that match given regular expressions.
-    highlight v0.1.1
 
     Usage: highlight [OPTIONS...] [FILE]
 
