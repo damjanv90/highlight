@@ -23,3 +23,10 @@ Linux shell program that highlights lines that match given regular expressions.
       -s, --selection-only          highlight only matched parts of the line, not the whole line
 
       -i, --ignore-case             ignore case in regex match
+
+
+# Installation
+
+Go to highlighter directory and run:
+
+    ./build.bash
