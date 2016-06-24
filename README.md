@@ -1,26 +1,25 @@
 # highlight
-Linux shell program that highlights lines that match given regular expressions.
 
-    Usage: highlight [OPTIONS...] PATTERN... [FILE]
+highlight v0.1.1
 
-    Example: highlight ERROR:red WARN:yellow debug.log
+Usage: highlight [OPTIONS...] [FILE]
 
-    PATTERN         REGEX:COLOR
+Example: highlight -p ERROR red -p WARN yellow debug.log
 
-      REGEX         a regular expression
-  
-      COLOR         red, yellow, green, blue, white
-  
-    FILE            a path to an input text file
+FILE            a path to an input text file
 
-    OPTIONS:
+OPTIONS
 
-          -h, --help            display this help and exit
-  
-          -b, --background      highlight background
-  
-          -i, --ignore-case     ignore case in regex match
+  -p, --pattern REGEX COLOR
 
+        REGEX   Regular expression (extended)
 
+        COLOR   Color to be used for highlighting of the given REGEX (one of red, green, yellow, blue, magneta, cyan, white; you can also use just the first char, e.g. red=r)
 
-This project is licensed under the terms of the MIT license.
+  -h, --help                    display this help and exit
+
+  -b, --background              highlight background
+
+  -s, --selection-only          highlight only matched parts of the line, not the whole line
+
+  -i, --ignore-case             ignore case in regex match
